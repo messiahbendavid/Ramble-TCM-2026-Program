@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ramble-TCM 2026 Program Schedule v4.8.2026</title>
+<title>Ramble-TCM 2026 Program Schedule v4.10.2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -15,7 +15,7 @@
   --text-light: #f5e6c8;
   --border-main: #8b7355;
   --border-light: #c4a882;
-  --accent-copper: #b87333;
+  --accent-copper: #b87333
   --accent-rust: #a0522d;
   --accent-gold: #c9a227;
   --font-heading: 'Orbitron', sans-serif;
@@ -37,28 +37,6 @@ body{
   min-height:100vh;overflow-x:hidden;
 }
 
-/* ─── TITLE ─── */
-.title-bar{
-  background:linear-gradient(135deg,var(--bg-darker) 0%,#3d2b1f 50%,var(--bg-darker) 100%);
-  padding:2rem 2rem 1.4rem;text-align:center;
-  border-bottom:4px solid var(--accent-copper);position:relative;overflow:hidden;
-}
-.title-bar::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(184,115,51,0.04) 60px,rgba(184,115,51,0.04) 61px);
-  pointer-events:none;
-}
-.main-title{font-family:var(--font-heading);font-size:2.6rem;font-weight:900;color:var(--accent-gold);text-transform:uppercase;letter-spacing:4px;text-shadow:0 2px 8px rgba(0,0,0,0.5);position:relative;}
-.version{font-family:var(--font-heading);font-size:0.95rem;color:var(--accent-copper);display:block;margin-top:0.4rem;letter-spacing:2px;font-weight:400;}
-.subtitle{font-family:var(--font-body);font-size:0.85rem;color:#9a8060;margin-top:0.5rem;letter-spacing:1px;}
-
-/* ─── LEGEND ─── */
-.legend-bar{display:flex;flex-wrap:wrap;gap:0.6rem 1.4rem;justify-content:center;padding:1rem 2rem;background:rgba(44,31,20,0.04);border-bottom:2px solid var(--border-light);}
-.legend-item{display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;font-family:var(--font-heading);letter-spacing:0.5px;color:#5a3e2b;}
-.legend-swatch{width:16px;height:16px;border-radius:3px;border:1px solid rgba(0,0,0,0.25);box-shadow:inset 0 1px 2px rgba(255,255,255,0.3);}
-.markers-legend{display:flex;gap:2.5rem;justify-content:center;padding:0.7rem;font-size:0.85rem;font-family:var(--font-body);color:#5a3e2b;}
-.marker-legend-item{display:flex;align-items:center;gap:0.4rem;}
-.marker-line-sample{width:24px;height:0;border-top:2.5px dashed;}
 
 /* ─── SECTION NAV ─── */
 .section-nav{
@@ -210,18 +188,6 @@ tr.section-sep td{height:3px;padding:0;border:none;}
 </head>
 <body>
 
-<div class="title-bar">
-  <div class="main-title">Ramble–TCM 2026 Program Schedule</div>
-  <span class="version">v4.8.2026</span>
-  <div class="subtitle">Master Construction &amp; Procurement Timeline &nbsp;│&nbsp; 66 Tasks &nbsp;│&nbsp; 12 Sections</div>
-</div>
-
-<div class="legend-bar" id="legend"></div>
-<div class="markers-legend">
-  <div class="marker-legend-item"><div class="marker-line-sample" style="border-color:rgba(34,139,34,0.7)"></div> Project Start (Apr 7)</div>
-  <div class="marker-legend-item"><div class="marker-line-sample" style="border-color:rgba(220,20,60,0.7)"></div> Construction Phase Amendment Projected Signing (Jun 30)</div>
-</div>
-
 <nav class="section-nav" id="sectionNav">
   <span class="section-nav-label">⚡ Jump to:</span>
 </nav>
@@ -237,7 +203,6 @@ tr.section-sep td{height:3px;padding:0;border:none;}
 
 <div class="back-to-top" id="backToTop" title="Back to top">▲</div>
 <div class="tooltip" id="tooltip"></div>
-<div class="footer">© 2026 Ramble × TCM &nbsp;—&nbsp; Confidential Program Document</div>
 
 <script>
 // ═══════════════ HELPERS ═══════════════
@@ -414,8 +379,6 @@ sorted.forEach((t,i)=>{t.displayNum=i+1;const a=A[t.id]||{};
 });
 
 // ═══════════════ LEGEND + NAV ═══════════════
-const legendEl=document.getElementById('legend');
-SECTION_ORDER.forEach(s=>{const c=SECTION_COLORS[s];legendEl.innerHTML+=`<div class="legend-item"><div class="legend-swatch" style="background:${c}"></div>${s}</div>`;});
 const navEl=document.getElementById('sectionNav');
 SECTION_ORDER.forEach(s=>{const c=SECTION_COLORS[s];const sh=s.replace('AIA Housekeeping — ','').replace('Pre-Construction','Pre-Con').replace('Construction','Constr').replace('Macro ','').replace('Micro ','');navEl.innerHTML+=`<button class="section-nav-btn" data-section="${s}" style="border-left:3px solid ${c}">${sh}</button>`;});
 
