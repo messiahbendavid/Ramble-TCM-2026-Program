@@ -23,7 +23,7 @@
   --header-h: 110px;
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; overflow:hidden; }
+html, body { height:100%; overflow-y:auto; }
 body { background:var(--bg-darker); color:var(--text-light); font-family:var(--font-body); }
 
 .top-bar {
@@ -109,14 +109,66 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 }
 .badge-current { background:var(--accent-gold); color:var(--bg-dark); }
 
+/* ─── CONTENT: relative so page scrolls when iframe expands ─── */
 .content {
-  position:fixed; top:var(--header-h); left:var(--sidebar-w);
-  right:0; bottom:0; background:#f5e6c8;
+  position:relative;
+  margin-top:var(--header-h);
+  margin-left:var(--sidebar-w);
+  background:#f5e6c8;
 }
-#scheduleFrame { display:block; border:none; width:100%; height:100%; }
+#scheduleFrame {
+  display:block; border:none; width:100%;
+  height:calc(100vh - var(--header-h) - 18px);
+  min-height:200px;
+}
 
+/* ─── IFRAME RESIZE HANDLE ─── */
+.iframe-resize-handle {
+  height:18px; cursor:ns-resize;
+  background:linear-gradient(135deg,#3d2b1f,#2c1f14);
+  border-top:2px solid var(--accent-copper);
+  display:flex; align-items:center; justify-content:center;
+  user-select:none; transition:background 0.15s; position:relative;
+}
+.iframe-resize-handle:hover,
+.iframe-resize-handle:active { background:var(--accent-copper); }
+.iframe-resize-handle::after {
+  content:''; width:50px; height:4px;
+  border-top:2px solid rgba(196,168,130,0.5);
+  border-bottom:2px solid rgba(196,168,130,0.5);
+}
+.iframe-resize-handle .handle-hint {
+  position:absolute; left:1rem;
+  font-family:var(--font-heading); font-size:0.45rem;
+  color:var(--text-muted); letter-spacing:1px;
+  text-transform:uppercase; pointer-events:none;
+}
+.iframe-resize-handle .handle-btn {
+  position:absolute; right:1rem;
+  font-family:var(--font-heading); font-size:0.5rem;
+  color:var(--accent-gold); background:none;
+  border:1px solid rgba(184,115,51,0.4);
+  padding:1px 8px; border-radius:3px;
+  cursor:pointer; letter-spacing:1px; transition:all 0.15s;
+}
+.iframe-resize-handle .handle-btn:hover {
+  background:var(--accent-copper); color:#fff; border-color:var(--accent-copper);
+}
+/* height indicator shown during drag */
+.iframe-resize-handle .height-indicator {
+  position:absolute; top:-28px; left:50%; transform:translateX(-50%);
+  font-family:var(--font-heading); font-size:0.55rem;
+  color:var(--accent-gold); background:var(--bg-dark);
+  border:1px solid var(--accent-copper); border-radius:4px;
+  padding:2px 10px; white-space:nowrap; pointer-events:none;
+  opacity:0; transition:opacity 0.15s;
+}
+.iframe-resize-handle .height-indicator.visible { opacity:1; }
+
+/* ─── LOADING OVERLAY: fixed so it always covers the viewport ─── */
 .loading-overlay {
-  position:absolute; inset:0; background:var(--bg-dark);
+  position:fixed; top:var(--header-h); left:var(--sidebar-w); right:0; bottom:0;
+  background:var(--bg-dark);
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   z-index:60; transition:opacity 0.4s ease;
 }
@@ -153,7 +205,8 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
   .sidebar { transform:translateX(-100%); }
   .sidebar.open { transform:translateX(0); box-shadow:6px 0 30px rgba(0,0,0,0.5); }
   .sidebar.open ~ .sidebar-backdrop { display:block; }
-  .content { left:0; }
+  .content { margin-left:0; }
+  .loading-overlay { left:0; }
   .main-title { font-size:1.3rem; letter-spacing:2px; }
   .subtitle { display:none; }
 }
@@ -192,6 +245,11 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     <div class="loading-text">Loading schedule…</div>
   </div>
   <iframe id="scheduleFrame" title="Schedule View"></iframe>
+  <div class="iframe-resize-handle" id="iframeResizeHandle" title="Drag to resize — double-click to reset">
+    <span class="handle-hint">↕ DRAG TO RESIZE</span>
+    <span class="height-indicator" id="heightIndicator"></span>
+    <button class="handle-btn" id="iframeExpandBtn">EXPAND</button>
+  </div>
 </main>
 
 <script>
@@ -228,6 +286,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     headerBadge.textContent = ver.version;
     headerBadge.classList.toggle('is-current', !!ver.current);
     document.querySelectorAll('.version-card').forEach(function(c) { c.classList.toggle('active', c.dataset.id === id); });
+    window.scrollTo({ top: 0 });
   }
   function renderVersions() {
     versionList.innerHTML = ''; versionCount.textContent = versions.length;
@@ -257,6 +316,133 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     });
 
   window.addEventListener('popstate', function() { var v = getUrlVersion(); if (v && v !== activeId) loadVersion(v); });
+
+  /* ═══════ IFRAME RESIZE HANDLE ═══════ */
+  (function() {
+    var handle = document.getElementById('iframeResizeHandle');
+    var expandBtn = document.getElementById('iframeExpandBtn');
+    var indicator = document.getElementById('heightIndicator');
+    var isResizing = false;
+    var startY = 0;
+    var startH = 0;
+    var isExpanded = false;
+    var hideTimer = null;
+
+    function getHeaderH() {
+      return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 110;
+    }
+
+    function defaultH() {
+      return window.innerHeight - getHeaderH() - 18;
+    }
+
+    function showIndicator(h) {
+      indicator.textContent = Math.round(h) + 'px';
+      indicator.classList.add('visible');
+      clearTimeout(hideTimer);
+    }
+
+    function hideIndicator() {
+      hideTimer = setTimeout(function() { indicator.classList.remove('visible'); }, 600);
+    }
+
+    /* ── Mouse drag ── */
+    handle.addEventListener('mousedown', function(e) {
+      if (e.target === expandBtn) return;
+      isResizing = true;
+      startY = e.clientY;
+      startH = frame.offsetHeight;
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isResizing) return;
+      var delta = e.clientY - startY;
+      var newH = Math.max(200, startH + delta);
+      frame.style.height = newH + 'px';
+      showIndicator(newH);
+      e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        hideIndicator();
+        // Update expand button state
+        var cur = frame.offsetHeight;
+        var def = defaultH();
+        isExpanded = cur > def + 20;
+        expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
+      }
+    });
+
+    /* ── Touch drag ── */
+    handle.addEventListener('touchstart', function(e) {
+      if (e.target === expandBtn) return;
+      isResizing = true;
+      startY = e.touches[0].clientY;
+      startH = frame.offsetHeight;
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function(e) {
+      if (!isResizing) return;
+      var delta = e.touches[0].clientY - startY;
+      var newH = Math.max(200, startH + delta);
+      frame.style.height = newH + 'px';
+      showIndicator(newH);
+    });
+
+    document.addEventListener('touchend', function() {
+      if (isResizing) {
+        isResizing = false;
+        hideIndicator();
+        var cur = frame.offsetHeight;
+        var def = defaultH();
+        isExpanded = cur > def + 20;
+        expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
+      }
+    });
+
+    /* ── Double-click to reset ── */
+    handle.addEventListener('dblclick', function(e) {
+      if (e.target === expandBtn) return;
+      frame.style.height = '';
+      isExpanded = false;
+      expandBtn.textContent = 'EXPAND';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ── Expand / Reset button ── */
+    expandBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (!isExpanded) {
+        var expandedH = defaultH() * 2;
+        frame.style.height = expandedH + 'px';
+        expandBtn.textContent = 'RESET';
+        isExpanded = true;
+      } else {
+        frame.style.height = '';
+        expandBtn.textContent = 'EXPAND';
+        isExpanded = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
+    /* ── Escape to restore ── */
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && isExpanded) {
+        frame.style.height = '';
+        expandBtn.textContent = 'EXPAND';
+        isExpanded = false;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  })();
 })();
 </script>
 </body>
