@@ -109,7 +109,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 }
 .badge-current { background:var(--accent-gold); color:var(--bg-dark); }
 
-/* ─── CONTENT: relative so page scrolls when iframe expands ─── */
+/* ─── CONTENT — relative so the page can scroll when iframe expands ─── */
 .content {
   position:relative;
   margin-top:var(--header-h);
@@ -120,7 +120,16 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
   display:block; border:none; width:100%;
   height:calc(100vh - var(--header-h) - 18px);
   min-height:200px;
+  pointer-events:auto;        /* guarantee clicks reach the iframe */
 }
+
+/* ─── TRANSPARENT SHIELD — sits over iframe ONLY during parent resize drag
+       so the parent keeps receiving mousemove; hidden otherwise ─── */
+.iframe-shield {
+  display:none; position:absolute; top:0; left:0; right:0; bottom:18px;
+  z-index:10; cursor:ns-resize;
+}
+.iframe-shield.active { display:block; }
 
 /* ─── IFRAME RESIZE HANDLE ─── */
 .iframe-resize-handle {
@@ -154,7 +163,6 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 .iframe-resize-handle .handle-btn:hover {
   background:var(--accent-copper); color:#fff; border-color:var(--accent-copper);
 }
-/* height indicator shown during drag */
 .iframe-resize-handle .height-indicator {
   position:absolute; top:-28px; left:50%; transform:translateX(-50%);
   font-family:var(--font-heading); font-size:0.55rem;
@@ -165,7 +173,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 }
 .iframe-resize-handle .height-indicator.visible { opacity:1; }
 
-/* ─── LOADING OVERLAY: fixed so it always covers the viewport ─── */
+/* ─── LOADING OVERLAY — fixed so it always covers the viewport ─── */
 .loading-overlay {
   position:fixed; top:var(--header-h); left:var(--sidebar-w); right:0; bottom:0;
   background:var(--bg-dark);
@@ -244,8 +252,12 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     <div class="spinner"></div>
     <div class="loading-text">Loading schedule…</div>
   </div>
+  <!-- shield is invisible and pointer-events:none EXCEPT while a resize-drag
+       is in progress — that stops the iframe from swallowing mousemove -->
+  <div class="iframe-shield" id="iframeShield"></div>
   <iframe id="scheduleFrame" title="Schedule View"></iframe>
-  <div class="iframe-resize-handle" id="iframeResizeHandle" title="Drag to resize — double-click to reset">
+  <div class="iframe-resize-handle" id="iframeResizeHandle"
+       title="Drag to resize — double-click to reset">
     <span class="handle-hint">↕ DRAG TO RESIZE</span>
     <span class="height-indicator" id="heightIndicator"></span>
     <button class="handle-btn" id="iframeExpandBtn">EXPAND</button>
@@ -254,162 +266,191 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 
 <script>
 (function () {
-  var sidebar = document.getElementById('sidebar');
+  var sidebar  = document.getElementById('sidebar');
   var backdrop = document.getElementById('backdrop');
   var menuToggle = document.getElementById('menuToggle');
   var versionList = document.getElementById('versionList');
   var versionCount = document.getElementById('versionCount');
-  var frame = document.getElementById('scheduleFrame');
-  var loading = document.getElementById('loadingOverlay');
+  var frame    = document.getElementById('scheduleFrame');
+  var loading  = document.getElementById('loadingOverlay');
   var headerBadge = document.getElementById('headerBadge');
   var versions = [];
   var activeId = null;
 
-  menuToggle.addEventListener('click', function() { sidebar.classList.toggle('open'); });
-  backdrop.addEventListener('click', function() { sidebar.classList.remove('open'); });
+  menuToggle.addEventListener('click', function () { sidebar.classList.toggle('open'); });
+  backdrop.addEventListener('click', function () { sidebar.classList.remove('open'); });
 
-  frame.addEventListener('load', function() {
-    setTimeout(function() { loading.classList.add('hidden'); sidebar.classList.remove('open'); }, 300);
+  frame.addEventListener('load', function () {
+    setTimeout(function () { loading.classList.add('hidden'); sidebar.classList.remove('open'); }, 300);
   });
 
-  function getUrlVersion() { return new URLSearchParams(window.location.search).get('v'); }
-  function setUrlVersion(id) {
+  function getUrlVersion () { return new URLSearchParams(window.location.search).get('v'); }
+  function setUrlVersion (id) {
     var url = new URL(window.location); url.searchParams.set('v', id);
     window.history.pushState({ v: id }, '', url);
   }
-  function loadVersion(id) {
-    var ver = versions.find(function(v) { return v.id === id; });
+  function loadVersion (id) {
+    var ver = versions.find(function (v) { return v.id === id; });
     if (!ver) return;
     activeId = id; setUrlVersion(id);
     loading.classList.remove('hidden');
     frame.src = ver.file;
     headerBadge.textContent = ver.version;
     headerBadge.classList.toggle('is-current', !!ver.current);
-    document.querySelectorAll('.version-card').forEach(function(c) { c.classList.toggle('active', c.dataset.id === id); });
+    document.querySelectorAll('.version-card').forEach(function (c) {
+      c.classList.toggle('active', c.dataset.id === id);
+    });
     window.scrollTo({ top: 0 });
   }
-  function renderVersions() {
+  function renderVersions () {
     versionList.innerHTML = ''; versionCount.textContent = versions.length;
-    versions.forEach(function(v) {
+    versions.forEach(function (v) {
       var card = document.createElement('div'); card.className = 'version-card'; card.dataset.id = v.id;
       var badges = v.current ? '<span class="badge badge-current">Latest</span>' : '';
-      card.innerHTML = '<div class="v-name">' + esc(v.version) + badges + '</div><div class="v-date">Published: ' + esc(v.date) + '</div>' + (v.description ? '<div class="v-desc">' + esc(v.description) + '</div>' : '');
-      card.addEventListener('click', function() { loadVersion(v.id); });
+      card.innerHTML =
+        '<div class="v-name">' + esc(v.version) + badges + '</div>' +
+        '<div class="v-date">Published: ' + esc(v.date) + '</div>' +
+        (v.description ? '<div class="v-desc">' + esc(v.description) + '</div>' : '');
+      card.addEventListener('click', function () { loadVersion(v.id); });
       versionList.appendChild(card);
     });
   }
-  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function esc (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   fetch('versions.json?_=' + Date.now())
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(data) {
-      versions = data.sort(function(a, b) { return b.date.localeCompare(a.date); });
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (data) {
+      versions = data.sort(function (a, b) { return b.date.localeCompare(a.date); });
       renderVersions();
       var urlVer = getUrlVersion();
-      var match = urlVer && versions.find(function(v) { return v.id === urlVer; });
-      var target = match ? match.id : (versions.find(function(v) { return v.current; }) || versions[0]).id;
+      var match  = urlVer && versions.find(function (v) { return v.id === urlVer; });
+      var target = match ? match.id : (versions.find(function (v) { return v.current; }) || versions[0]).id;
       loadVersion(target);
     })
-    .catch(function(err) {
+    .catch(function (err) {
       console.error(err);
-      loading.innerHTML = '<div class="error-state"><div class="error-icon">⚠</div><div class="error-title">Cannot Load Versions</div><div class="error-hint">Could not load <code>versions.json</code></div></div>';
+      loading.innerHTML =
+        '<div class="error-state"><div class="error-icon">⚠</div>' +
+        '<div class="error-title">Cannot Load Versions</div>' +
+        '<div class="error-hint">Could not load <code>versions.json</code></div></div>';
     });
 
-  window.addEventListener('popstate', function() { var v = getUrlVersion(); if (v && v !== activeId) loadVersion(v); });
+  window.addEventListener('popstate', function () {
+    var v = getUrlVersion(); if (v && v !== activeId) loadVersion(v);
+  });
 
-  /* ═══════ IFRAME RESIZE HANDLE ═══════ */
-  (function() {
-    var handle = document.getElementById('iframeResizeHandle');
+  /* ═══════════════════════════════════════════════════════
+     CROSS-FRAME EVENT FORWARDING
+     – Keeps the schedule's grab-to-pan working even when
+       the cursor momentarily leaves the iframe (e.g. over
+       the resize handle).
+     ═══════════════════════════════════════════════════════ */
+  document.addEventListener('mouseup', function () {
+    try {
+      var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+      if (doc) doc.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    } catch (e) { /* cross-origin — ignore */ }
+  });
+
+  document.addEventListener('mousemove', function (e) {
+    // Only forward when nothing on the parent is being dragged
+    if (parentResizing) return;
+    try {
+      var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+      if (!doc) return;
+      var r = frame.getBoundingClientRect();
+      doc.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true,
+        clientX: e.clientX - r.left,
+        clientY: e.clientY - r.top
+      }));
+    } catch (e2) { /* cross-origin — ignore */ }
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     IFRAME RESIZE HANDLE
+     ═══════════════════════════════════════════════════════ */
+  var parentResizing = false;           // shared flag read by forwarder above
+
+  (function () {
+    var handle    = document.getElementById('iframeResizeHandle');
     var expandBtn = document.getElementById('iframeExpandBtn');
     var indicator = document.getElementById('heightIndicator');
-    var isResizing = false;
-    var startY = 0;
-    var startH = 0;
-    var isExpanded = false;
-    var hideTimer = null;
+    var shield    = document.getElementById('iframeShield');
+    var startY = 0, startH = 0, isExpanded = false, hideTimer = null;
 
-    function getHeaderH() {
-      return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 110;
+    function defaultH () {
+      var hh = parseFloat(getComputedStyle(document.documentElement)
+                   .getPropertyValue('--header-h')) || 110;
+      return window.innerHeight - hh - 18;
     }
 
-    function defaultH() {
-      return window.innerHeight - getHeaderH() - 18;
-    }
-
-    function showIndicator(h) {
+    function showIndicator (h) {
       indicator.textContent = Math.round(h) + 'px';
       indicator.classList.add('visible');
       clearTimeout(hideTimer);
     }
-
-    function hideIndicator() {
-      hideTimer = setTimeout(function() { indicator.classList.remove('visible'); }, 600);
+    function hideIndicator () {
+      hideTimer = setTimeout(function () { indicator.classList.remove('visible'); }, 600);
     }
 
     /* ── Mouse drag ── */
-    handle.addEventListener('mousedown', function(e) {
+    handle.addEventListener('mousedown', function (e) {
       if (e.target === expandBtn) return;
-      isResizing = true;
+      parentResizing = true;
       startY = e.clientY;
       startH = frame.offsetHeight;
+      shield.classList.add('active');          // cover iframe so we keep getting mousemove
       document.body.style.cursor = 'ns-resize';
       document.body.style.userSelect = 'none';
       e.preventDefault();
     });
 
-    document.addEventListener('mousemove', function(e) {
-      if (!isResizing) return;
-      var delta = e.clientY - startY;
-      var newH = Math.max(200, startH + delta);
+    document.addEventListener('mousemove', function (e) {
+      if (!parentResizing) return;
+      var newH = Math.max(200, startH + (e.clientY - startY));
       frame.style.height = newH + 'px';
       showIndicator(newH);
       e.preventDefault();
     });
 
-    document.addEventListener('mouseup', function() {
-      if (isResizing) {
-        isResizing = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        hideIndicator();
-        // Update expand button state
-        var cur = frame.offsetHeight;
-        var def = defaultH();
-        isExpanded = cur > def + 20;
-        expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
-      }
+    document.addEventListener('mouseup', function () {
+      if (!parentResizing) return;
+      parentResizing = false;
+      shield.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      hideIndicator();
+      isExpanded = frame.offsetHeight > defaultH() + 20;
+      expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
     });
 
     /* ── Touch drag ── */
-    handle.addEventListener('touchstart', function(e) {
+    handle.addEventListener('touchstart', function (e) {
       if (e.target === expandBtn) return;
-      isResizing = true;
+      parentResizing = true;
       startY = e.touches[0].clientY;
       startH = frame.offsetHeight;
       e.preventDefault();
     }, { passive: false });
 
-    document.addEventListener('touchmove', function(e) {
-      if (!isResizing) return;
-      var delta = e.touches[0].clientY - startY;
-      var newH = Math.max(200, startH + delta);
+    document.addEventListener('touchmove', function (e) {
+      if (!parentResizing) return;
+      var newH = Math.max(200, startH + (e.touches[0].clientY - startY));
       frame.style.height = newH + 'px';
       showIndicator(newH);
     });
 
-    document.addEventListener('touchend', function() {
-      if (isResizing) {
-        isResizing = false;
-        hideIndicator();
-        var cur = frame.offsetHeight;
-        var def = defaultH();
-        isExpanded = cur > def + 20;
-        expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
-      }
+    document.addEventListener('touchend', function () {
+      if (!parentResizing) return;
+      parentResizing = false;
+      hideIndicator();
+      isExpanded = frame.offsetHeight > defaultH() + 20;
+      expandBtn.textContent = isExpanded ? 'RESET' : 'EXPAND';
     });
 
     /* ── Double-click to reset ── */
-    handle.addEventListener('dblclick', function(e) {
+    handle.addEventListener('dblclick', function (e) {
       if (e.target === expandBtn) return;
       frame.style.height = '';
       isExpanded = false;
@@ -418,11 +459,10 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     });
 
     /* ── Expand / Reset button ── */
-    expandBtn.addEventListener('click', function(e) {
+    expandBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       if (!isExpanded) {
-        var expandedH = defaultH() * 2;
-        frame.style.height = expandedH + 'px';
+        frame.style.height = (defaultH() * 2) + 'px';
         expandBtn.textContent = 'RESET';
         isExpanded = true;
       } else {
@@ -434,7 +474,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     });
 
     /* ── Escape to restore ── */
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isExpanded) {
         frame.style.height = '';
         expandBtn.textContent = 'EXPAND';
