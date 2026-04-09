@@ -130,6 +130,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 }
 .iframe-container {
   position:absolute; inset:0; overflow:hidden;
+  z-index: 1;
 }
 .iframe-container iframe {
   position:absolute; top:0; left:0;
@@ -138,7 +139,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
 
 /* ═══ ZOOM TOOLBAR ═══ */
 .zoom-toolbar {
-  position:absolute; bottom:24px; right:24px; z-index:50;
+  position:absolute; bottom:24px; right:24px; z-index:100;
   display:flex; align-items:center; gap:3px;
   background:linear-gradient(135deg,rgba(26,18,11,0.95),rgba(61,43,31,0.95));
   border:2px solid var(--accent-copper); border-radius:10px;
@@ -271,6 +272,11 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     <div class="loading-text">Loading schedule…</div>
   </div>
 
+  <!-- SCALED IFRAME -->
+  <div class="iframe-container" id="iframeContainer">
+    <iframe id="scheduleFrame" title="Schedule View"></iframe>
+  </div>
+
   <!-- ZOOM TOOLBAR -->
   <div class="zoom-toolbar" id="zoomToolbar">
     <button class="zoom-btn" id="zoomOut" title="Zoom Out">−</button>
@@ -282,10 +288,6 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     <span class="zoom-hint">Ctrl ± to zoom</span>
   </div>
 
-  <!-- SCALED IFRAME -->
-  <div class="iframe-container" id="iframeContainer">
-    <iframe id="scheduleFrame" title="Schedule View"></iframe>
-  </div>
 </main>
 
 <script>
