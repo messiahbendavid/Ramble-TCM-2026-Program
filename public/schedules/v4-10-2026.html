@@ -569,29 +569,22 @@ backTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smo
 
 // ═══════════════ ZOOM CONTROLS ═══════════════
 (function(){
-  var STEP=0.05, MIN_Z=0.15, MAX_Z=2.0, current=1;
+  var STEP=0.1, MIN_Z=0.2, MAX_Z=2.0, current=1;
   var label=document.getElementById('zoomLevel');
+  var table=document.getElementById('schedule-table');
 
   function apply(z){
     current=Math.round(Math.max(MIN_Z,Math.min(MAX_Z,z))*100)/100;
-    document.documentElement.style.zoom=String(current);
+    table.style.zoom=String(current);
     label.textContent=Math.round(current*100)+'%';
-    // Re-measure sticky headers and wrapper after zoom change
-    setTimeout(function(){fixStickyHeaders();updateWrapperHeight();},50);
+    setTimeout(fixStickyHeaders,50);
   }
 
   function fit(){
-    document.documentElement.style.zoom='1';
-    var tbl=document.getElementById('schedule-table');
-    if(tbl){
-      var tw=tbl.scrollWidth;
-      var bh=document.body.scrollHeight;
-      var ww=window.innerWidth;
-      var wh=window.innerHeight;
-      apply(Math.min(ww/tw, wh/bh)*0.92);
-    } else {
-      apply(0.35);
-    }
+    table.style.zoom='1';
+    var tw=table.scrollWidth;
+    var ww=wrap.clientWidth;
+    apply((ww/tw)*0.98);
   }
 
   document.getElementById('zoomIn').addEventListener('click',function(){apply(current+STEP);});
@@ -600,11 +593,9 @@ backTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smo
   document.getElementById('zoomReset').addEventListener('click',function(){apply(1);});
 
   document.getElementById('zoomToolbar').addEventListener('wheel',function(e){
-    e.preventDefault();
-    apply(current+(e.deltaY<0?STEP:-STEP));
+    e.preventDefault();apply(current+(e.deltaY<0?STEP:-STEP));
   },{passive:false});
 
-  // Keyboard: Ctrl+Plus, Ctrl+Minus, Ctrl+0
   document.addEventListener('keydown',function(e){
     if(!(e.ctrlKey||e.metaKey))return;
     if(e.key==='='||e.key==='+'){e.preventDefault();apply(current+STEP);}
@@ -612,8 +603,7 @@ backTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smo
     if(e.key==='0'){e.preventDefault();fit();}
   });
 
-  // Auto-fit on page load
-  fit();
+  setTimeout(fit,200);
 })();
 </script>
 </body>
