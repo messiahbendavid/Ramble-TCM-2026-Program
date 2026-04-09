@@ -191,6 +191,32 @@ tr.section-sep td{height:3px;padding:0;border:none;}
 .back-to-top{position:fixed;bottom:20px;right:70px;z-index:200;width:44px;height:44px;border-radius:50%;background:var(--bg-dark);color:var(--accent-gold);border:2px solid var(--accent-copper);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.2s;opacity:0;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
 .back-to-top.visible{opacity:1;pointer-events:auto;}
 .back-to-top:hover{background:var(--accent-copper);color:#fff;transform:scale(1.1);}
+
+/* ─── ZOOM TOOLBAR ─── */
+.zoom-toolbar {
+  position:fixed; bottom:20px; right:20px; z-index:9999;
+  display:flex; align-items:center; gap:3px;
+  background:linear-gradient(135deg,rgba(26,18,11,0.95),rgba(61,43,31,0.95));
+  border:2px solid var(--accent-copper); border-radius:10px;
+  padding:6px 8px; box-shadow:0 6px 28px rgba(0,0,0,0.6);
+  backdrop-filter:blur(12px); user-select:none;
+}
+.zoom-btn {
+  font-family:var(--font-heading); font-size:1.1rem; font-weight:700;
+  width:40px; height:40px;
+  border:1px solid rgba(184,115,51,0.3); border-radius:6px;
+  background:rgba(255,255,255,0.06); color:#c9a227;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.15s;
+}
+.zoom-btn:hover { background:#b87333; color:#fff; border-color:#b87333; }
+.zoom-btn:active { transform:scale(0.95); }
+.zoom-btn-text { font-size:0.55rem; width:auto; padding:0 14px; letter-spacing:1px; }
+.zoom-level {
+  font-family:var(--font-heading); font-size:0.72rem; font-weight:600;
+  color:#f5e6c8; min-width:54px; text-align:center; letter-spacing:1px;
+}
+.zoom-divider { width:1px; height:28px; background:rgba(184,115,51,0.3); margin:0 5px; }
 </style>
 </head>
 <body>
@@ -212,6 +238,46 @@ tr.section-sep td{height:3px;padding:0;border:none;}
 <div class="tooltip" id="tooltip"></div>
   
 <script>
+// ═══════════════ ZOOM CONTROLS ═══════════════
+(function(){
+  var STEP = 0.05, MIN = 0.15, MAX = 2.0;
+  var current = 1;
+  var label = document.getElementById('zoomLevel');
+
+  function apply(z) {
+    current = Math.round(Math.max(MIN, Math.min(MAX, z)) * 100) / 100;
+    document.documentElement.style.zoom = String(current);
+    label.textContent = Math.round(current * 100) + '%';
+  }
+
+  function fit() {
+    var table = document.getElementById('schedule-table');
+    if (table) {
+      document.documentElement.style.zoom = '1';
+      var tw = table.scrollWidth;
+      var th = document.body.scrollHeight;
+      var ww = window.innerWidth;
+      var wh = window.innerHeight;
+      apply(Math.min(ww / tw, wh / th) * 0.95);
+    } else {
+      apply(0.35);
+    }
+  }
+
+  document.getElementById('zoomIn').addEventListener('click', function(){ apply(current + STEP); });
+  document.getElementById('zoomOut').addEventListener('click', function(){ apply(current - STEP); });
+  document.getElementById('zoomFit').addEventListener('click', fit);
+  document.getElementById('zoomReset').addEventListener('click', function(){ apply(1); });
+
+  document.getElementById('zoomToolbar').addEventListener('wheel', function(e){
+    e.preventDefault();
+    apply(current + (e.deltaY < 0 ? STEP : -STEP));
+  }, {passive:false});
+
+  // Auto-fit on load
+  fit();
+})();
+  
 // ═══════════════ HELPERS ═══════════════
 const PX_PER_DAY=6,GANTT_WIDTH=1200;
 function D(y,m,d){return new Date(y,m-1,d);}
@@ -605,6 +671,14 @@ backTop.addEventListener('click',()=>{window.scrollTo({top:0,behavior:'smooth'})
   });
   wrap.appendChild(svg);
 })();
+<div class="zoom-toolbar" id="zoomToolbar">
+  <button class="zoom-btn" id="zoomOut" title="Zoom Out">−</button>
+  <div class="zoom-level" id="zoomLevel">100%</div>
+  <button class="zoom-btn" id="zoomIn" title="Zoom In">+</button>
+  <div class="zoom-divider"></div>
+  <button class="zoom-btn zoom-btn-text" id="zoomFit" title="Fit to screen">FIT</button>
+  <button class="zoom-btn zoom-btn-text" id="zoomReset" title="Actual size">1:1</button>
+</div>
 </script>
 </body>
 </html>
