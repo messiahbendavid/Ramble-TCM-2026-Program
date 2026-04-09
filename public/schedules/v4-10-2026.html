@@ -205,12 +205,9 @@ tr.section-sep td{height:3px;padding:0;border:none;}
 <div class="tooltip" id="tooltip"></div>
   
 <script>
-  // ═══════════════ AUTO-ZOOM WHEN EMBEDDED ═══════════════
-(function() {
-  if (window.self !== window.top) {
-    document.documentElement.style.zoom = '0.65';
-  }
-})();
+html {
+  zoom: 0.65;
+}
 // ═══════════════ HELPERS ═══════════════
 const PX_PER_DAY=6,GANTT_WIDTH=1200;
 function D(y,m,d){return new Date(y,m-1,d);}
