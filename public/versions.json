@@ -1,1 +1,10 @@
-
+[
+  {
+    "id": "v4-10-2026",
+    "version": "v4.10.2026",
+    "date": "2026-04-10",
+    "description": "Initial master schedule — 66 tasks, 12 sections. Baseline GMP/CPA timeline.",
+    "file": "schedules/v4-10-2026.html",
+    "current": true
+  }
+]
