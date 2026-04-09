@@ -1,1 +1,360 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramble–TCM 2026 Program Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #1a120b;
+  --bg-darker: #110c07;
+  --bg-panel: #2c1f14;
+  --bg-card: #3d2b1f;
+  --bg-card-hover: #4a3728;
+  --text-light: #f5e6c8;
+  --text-muted: #9a8060;
+  --accent-copper: #b87333;
+  --accent-gold: #c9a227;
+  --border-main: #4a3728;
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Share Tech Mono', 'Courier New', monospace;
+  --sidebar-w: 300px;
+  --header-h: 64px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body { background:var(--bg-darker); color:var(--text-light); font-family:var(--font-body); }
+
+/* ═══ HEADER ═══ */
+.top-bar {
+  position:fixed; top:0; left:0; right:0; height:var(--header-h);
+  background:linear-gradient(135deg,var(--bg-dark) 0%,#3d2b1f 50%,var(--bg-dark) 100%);
+  border-bottom:3px solid var(--accent-copper);
+  display:flex; align-items:center; padding:0 1.5rem; z-index:1000;
+}
+.top-bar::after {
+  content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(184,115,51,0.03) 80px,rgba(184,115,51,0.03) 81px);
+  pointer-events:none;
+}
+.menu-toggle {
+  display:none; background:none; border:1px solid var(--accent-copper);
+  color:var(--accent-gold); font-size:1.4rem; padding:6px 12px;
+  border-radius:4px; cursor:pointer; margin-right:1rem;
+  font-family:var(--font-body); transition:all 0.2s; position:relative; z-index:1;
+}
+.menu-toggle:hover { background:var(--accent-copper); color:#fff; }
+.top-title { flex:1; position:relative; z-index:1; }
+.top-main {
+  font-family:var(--font-heading); font-size:1.4rem; font-weight:900;
+  color:var(--accent-gold); letter-spacing:3px; text-transform:uppercase;
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+.top-sub { display:block; font-size:0.7rem; color:var(--text-muted); letter-spacing:1.5px; margin-top:2px; }
+.header-version {
+  position:relative; z-index:1;
+  font-family:var(--font-heading); font-size:0.65rem; color:var(--accent-copper);
+  letter-spacing:1.5px; text-transform:uppercase;
+  padding:8px 16px; border:1px solid rgba(184,115,51,0.4);
+  border-radius:4px; background:rgba(184,115,51,0.08);
+  white-space:nowrap;
+}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar {
+  position:fixed; top:var(--header-h); left:0; bottom:0;
+  width:var(--sidebar-w); background:var(--bg-panel);
+  border-right:2px solid var(--border-main);
+  display:flex; flex-direction:column;
+  z-index:900; transition:transform 0.3s ease;
+}
+.sidebar-header {
+  padding:1.4rem 1.2rem 1rem;
+  border-bottom:1px solid var(--border-main);
+  flex-shrink:0;
+}
+.sidebar-header h2 {
+  font-family:var(--font-heading); font-size:0.7rem; font-weight:600;
+  color:var(--accent-gold); text-transform:uppercase; letter-spacing:2px;
+}
+.sidebar-hint { font-size:0.68rem; color:var(--text-muted); margin-top:0.4rem; line-height:1.4; }
+.version-count {
+  display:inline-block; font-family:var(--font-heading); font-size:0.5rem;
+  background:var(--accent-copper); color:var(--bg-dark);
+  padding:2px 7px; border-radius:10px; margin-left:0.5rem;
+  font-weight:700; vertical-align:middle;
+}
+.version-list { flex:1; overflow-y:auto; padding:0.8rem; }
+.version-list::-webkit-scrollbar { width:6px; }
+.version-list::-webkit-scrollbar-track { background:var(--bg-dark); border-radius:3px; }
+.version-list::-webkit-scrollbar-thumb { background:var(--accent-copper); border-radius:3px; }
+
+/* ═══ VERSION CARDS ═══ */
+.version-card {
+  background:var(--bg-card); border:1px solid var(--border-main);
+  border-radius:6px; padding:0.9rem 1rem; margin-bottom:0.5rem;
+  cursor:pointer; transition:all 0.2s ease; position:relative;
+  border-left:3px solid transparent;
+}
+.version-card:hover {
+  background:var(--bg-card-hover); border-color:var(--accent-copper);
+  transform:translateX(2px); box-shadow:0 2px 12px rgba(0,0,0,0.2);
+}
+.version-card.active {
+  border-left-color:var(--accent-gold); background:rgba(201,162,39,0.1);
+  box-shadow:0 0 16px rgba(201,162,39,0.1);
+}
+.version-card.active .v-name { color:var(--accent-gold); }
+.v-name {
+  font-family:var(--font-heading); font-size:0.8rem; font-weight:700;
+  color:var(--text-light); letter-spacing:1px; transition:color 0.2s;
+}
+.v-date { font-size:0.68rem; color:var(--text-muted); margin-top:0.3rem; }
+.v-desc { font-size:0.68rem; color:var(--accent-copper); margin-top:0.35rem; line-height:1.4; font-style:italic; }
+.badge {
+  display:inline-block; font-family:var(--font-heading); font-size:0.45rem;
+  font-weight:700; padding:2px 8px; border-radius:3px;
+  letter-spacing:1px; text-transform:uppercase; margin-left:0.6rem;
+  vertical-align:middle;
+}
+.badge-current { background:var(--accent-gold); color:var(--bg-dark); }
+.badge-draft { background:rgba(184,115,51,0.3); color:var(--accent-copper); border:1px solid var(--accent-copper); }
+
+/* ═══ MAIN CONTENT ═══ */
+.content {
+  position:fixed; top:var(--header-h); left:var(--sidebar-w);
+  right:0; bottom:0; background:#f5e6c8;
+}
+.content iframe { width:100%; height:100%; border:none; display:block; }
+
+/* ═══ LOADING OVERLAY ═══ */
+.loading-overlay {
+  position:absolute; inset:0; background:var(--bg-dark);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:10; transition:opacity 0.4s ease;
+}
+.loading-overlay.hidden { opacity:0; pointer-events:none; }
+.spinner {
+  width:44px; height:44px;
+  border:3px solid var(--border-main); border-top-color:var(--accent-gold);
+  border-radius:50%; animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-text {
+  font-family:var(--font-heading); font-size:0.65rem; color:var(--text-muted);
+  margin-top:1.2rem; letter-spacing:2px; text-transform:uppercase;
+}
+
+/* ═══ ERROR / EMPTY STATE ═══ */
+.error-state {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:var(--bg-dark); text-align:center; padding:2rem;
+}
+.error-icon { font-size:3rem; margin-bottom:1rem; opacity:0.7; }
+.error-title {
+  font-family:var(--font-heading); font-size:0.9rem;
+  color:var(--accent-gold); letter-spacing:2px; margin-bottom:0.6rem;
+}
+.error-hint {
+  font-size:0.72rem; color:var(--text-muted); letter-spacing:0.5px;
+  max-width:420px; line-height:1.6;
+}
+.error-hint code {
+  background:rgba(184,115,51,0.15); color:var(--accent-copper);
+  padding:1px 6px; border-radius:3px; font-size:0.7rem;
+}
+
+/* ═══ BACKDROP ═══ */
+.sidebar-backdrop {
+  display:none; position:fixed; inset:0; z-index:899;
+  background:rgba(0,0,0,0.5); backdrop-filter:blur(2px);
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width:960px) {
+  .menu-toggle { display:block; }
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); box-shadow:6px 0 30px rgba(0,0,0,0.5); }
+  .sidebar.open ~ .sidebar-backdrop { display:block; }
+  .content { left:0; }
+  .top-main { font-size:1rem; letter-spacing:2px; }
+  .header-version { font-size:0.55rem; padding:6px 10px; }
+}
+@media (max-width:500px) {
+  :root { --sidebar-w: 280px; }
+  .top-main { font-size:0.85rem; }
+  .top-sub { display:none; }
+}
+
+/* ═══ SIDEBAR FOOTER ═══ */
+.sidebar-footer {
+  padding:0.8rem 1.2rem; border-top:1px solid var(--border-main);
+  font-size:0.55rem; color:var(--text-muted); text-align:center;
+  font-family:var(--font-heading); letter-spacing:1px; flex-shrink:0;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="top-bar">
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">☰</button>
+  <div class="top-title">
+    <span class="top-main">Ramble–TCM 2026</span>
+    <span class="top-sub">Program Schedule Archive</span>
+  </div>
+  <div class="header-version" id="headerBadge">Loading…</div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h2>Schedule Versions <span class="version-count" id="versionCount">0</span></h2>
+    <p class="sidebar-hint">Each version is a weekly snapshot of the master schedule and Gantt chart.</p>
+  </div>
+  <div class="version-list" id="versionList"></div>
+  <div class="sidebar-footer">© 2026 Ramble × TCM — Confidential</div>
+</aside>
+<div class="sidebar-backdrop" id="backdrop"></div>
+
+<!-- MAIN CONTENT -->
+<main class="content" id="content">
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading schedule…</div>
+  </div>
+  <iframe id="scheduleFrame" title="Schedule View"></iframe>
+</main>
+
+<script>
+(function () {
+  // ─── DOM refs ───
+  const sidebar     = document.getElementById('sidebar');
+  const backdrop    = document.getElementById('backdrop');
+  const menuToggle  = document.getElementById('menuToggle');
+  const versionList = document.getElementById('versionList');
+  const versionCount= document.getElementById('versionCount');
+  const frame       = document.getElementById('scheduleFrame');
+  const loading     = document.getElementById('loadingOverlay');
+  const headerBadge = document.getElementById('headerBadge');
+
+  let versions = [];
+  let activeId = null;
+
+  // ─── Mobile sidebar toggle ───
+  menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
+  backdrop.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+  });
+
+  // ─── iframe loaded ───
+  frame.addEventListener('load', () => {
+    // Small delay so the schedule renders before we fade out the overlay
+    setTimeout(() => loading.classList.add('hidden'), 200);
+    sidebar.classList.remove('open');
+  });
+
+  // ─── URL param helpers ───
+  function getUrlVersion() {
+    return new URLSearchParams(window.location.search).get('v');
+  }
+  function setUrlVersion(id) {
+    const url = new URL(window.location);
+    url.searchParams.set('v', id);
+    window.history.pushState({ v: id }, '', url);
+  }
+
+  // ─── Load a version ───
+  function loadVersion(id) {
+    const ver = versions.find(v => v.id === id);
+    if (!ver) return;
+    activeId = id;
+    setUrlVersion(id);
+    loading.classList.remove('hidden');
+    frame.src = ver.file;
+    headerBadge.textContent = 'Viewing: ' + ver.version + (ver.current ? ' (Current)' : '');
+    // Update active card
+    document.querySelectorAll('.version-card').forEach(card => {
+      card.classList.toggle('active', card.dataset.id === id);
+    });
+  }
+
+  // ─── Render version cards ───
+  function renderVersions() {
+    versionList.innerHTML = '';
+    versionCount.textContent = versions.length;
+    versions.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'version-card';
+      card.dataset.id = v.id;
+
+      let badges = '';
+      if (v.current) badges += '<span class="badge badge-current">Latest</span>';
+      if (v.draft)   badges += '<span class="badge badge-draft">Draft</span>';
+
+      card.innerHTML = `
+        <div class="v-name">${esc(v.version)}${badges}</div>
+        <div class="v-date">Published: ${esc(v.date)}</div>
+        ${v.description ? `<div class="v-desc">${esc(v.description)}</div>` : ''}
+      `;
+      card.addEventListener('click', () => loadVersion(v.id));
+      versionList.appendChild(card);
+    });
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ─── Show error ───
+  function showError(msg) {
+    loading.innerHTML = `
+      <div class="error-state">
+        <div class="error-icon">⚠</div>
+        <div class="error-title">Cannot Load Versions</div>
+        <div class="error-hint">${msg}</div>
+      </div>`;
+  }
+
+  // ─── Boot ───
+  fetch('versions.json?_=' + Date.now())
+    .then(r => {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    })
+    .then(data => {
+      // Sort newest-first by date
+      versions = data.sort((a, b) => b.date.localeCompare(a.date));
+      renderVersions();
+
+      // Which version to show?
+      const urlVer = getUrlVersion();
+      const match  = urlVer && versions.find(v => v.id === urlVer);
+      const target = match ? match.id : (versions.find(v => v.current) || versions[0]).id;
+      loadVersion(target);
+    })
+    .catch(err => {
+      console.error(err);
+      showError(
+        'Could not load <code>versions.json</code>. Make sure the file exists next to <code>index.html</code>.' +
+        '<br><br>Error: ' + esc(String(err))
+      );
+      headerBadge.textContent = 'Error';
+    });
+
+  // ─── Handle browser back/forward ───
+  window.addEventListener('popstate', (e) => {
+    const v = getUrlVersion();
+    if (v && v !== activeId) loadVersion(v);
+  });
+})();
+</script>
+</body>
+</html>
