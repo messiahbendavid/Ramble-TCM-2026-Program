@@ -389,7 +389,7 @@ body { background:var(--bg-darker); color:var(--text-light); font-family:var(--f
     setTimeout(function() {
       loading.classList.add('hidden');
       sidebar.classList.remove('open');
-      fitToAll();          // ← auto zoom-to-fit on every load
+      applyZoom(0.4);          // ← auto zoom-to-fit on every load
     }, 400);
   });
 
